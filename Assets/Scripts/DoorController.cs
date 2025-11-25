@@ -6,21 +6,26 @@ public class DoorController : MonoBehaviour
     [Header("Animator가 붙어 있는 DoorHinge")]
     public Animator doorAnimator;   // DoorHinge의 Animator
 
+    [Header("Press F UI 오브젝트")]
+    public GameObject interactUI;   // Canvas 밑의 Press F UI
+
     private bool isOpen = false;      // 문이 열려 있는지 여부
     private bool isPlayerNear = false; // 플레이어가 범위 안에 있는지 여부
 
     private void Start()
     {
-        // Inspector에서 안 넣었으면 자식들 중에서 자동으로 Animator 찾기
+        // Animator 자동 할당
         if (doorAnimator == null)
-        {
             doorAnimator = GetComponentInChildren<Animator>();
-        }
+
+        // UI 시작 시 비활성화
+        if (interactUI != null)
+            interactUI.SetActive(false);
     }
 
     private void Update()
     {
-        // 플레이어가 근처에 있고, 이번 프레임에 F 키가 눌렸으면
+        // 플레이어가 문 앞에 있을 때만 F 키 입력 처리
         if (isPlayerNear &&
             Keyboard.current != null &&
             Keyboard.current.fKey.wasPressedThisFrame)
@@ -31,28 +36,31 @@ public class DoorController : MonoBehaviour
 
     private void ToggleDoor()
     {
-        // 상태 토글
-        isOpen = !isOpen;
-
-        // Animator Bool 값 변경 → Transition 타고 Open/Close 애니메이션 재생
+        isOpen = !isOpen;   // 상태 반전
         doorAnimator.SetBool("isOpen", isOpen);
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Player 태그 가진 오브젝트가 들어오면
         if (other.CompareTag("Player"))
         {
             isPlayerNear = true;
+
+            // UI 활성화
+            if (interactUI != null)
+                interactUI.SetActive(true);
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        // Player가 영역 밖으로 나가면
         if (other.CompareTag("Player"))
         {
             isPlayerNear = false;
+
+            // UI 비활성화
+            if (interactUI != null)
+                interactUI.SetActive(false);
         }
     }
 }
