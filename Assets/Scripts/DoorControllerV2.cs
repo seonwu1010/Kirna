@@ -1,4 +1,4 @@
-﻿/*using UnityEngine;
+/*using UnityEngine;
 using UnityEngine.InputSystem;  // »õ Input System »ç¿ëÇÒ ¶§ ÇÊ¿ä
 
 public class DoorController : MonoBehaviour
@@ -69,14 +69,19 @@ public class DoorController : MonoBehaviour
 
 using UnityEngine;
 using UnityEngine.InputSystem;
+using TMPro;    // <- IMPORTANT if you use TextMeshPro
 
 public class DoorController : MonoBehaviour
 {
     [Header("Animator°¡ ºÙ¾î ÀÖ´Â DoorHinge")]
     public Animator doorAnimator;   // DoorHingeÀÇ Animator
 
-    [Header("Press F UI ¿ÀºêÁ§Æ®")]
-    public GameObject interactUI;   // Canvas ¹ØÀÇ Press F UI
+    [Header("Press F UI ¿ÀºêÁ§Æ® (Panel)")]
+    public GameObject interactUI;   // Canvas ¹ØÀÇ Press F UI Panel
+
+    [Header("UI Text References")]
+    public TextMeshProUGUI promptText;       // "Open Door (F)"
+    public TextMeshProUGUI lockedMessageText; // "You have to find the key first!"
 
     [Header("Inventory / Key Settings")]
     public string requiredItemId = "Keycard"; // 아이템 ID (예: Keycard)
@@ -87,6 +92,10 @@ public class DoorController : MonoBehaviour
     // 현재 범위 안에 있는 플레이어 인벤토리
     private PlayerInventory currentPlayerInventory;
 
+    [Header("Locked Message Settings")]
+    public string lockedMessage = "You have to find the key first!";
+    public float lockedMessageDuration = 2f; // seconds
+
     private void Start()
     {
         // Animator ÀÚµ¿ ÇÒ´ç
@@ -96,6 +105,10 @@ public class DoorController : MonoBehaviour
         // UI ½ÃÀÛ ½Ã ºñÈ°¼ºÈ­
         if (interactUI != null)
             interactUI.SetActive(false);
+
+        // Hide locked message at start
+        if (lockedMessageText != null)
+            lockedMessageText.gameObject.SetActive(false);
     }
 
     private void Update()
@@ -111,13 +124,20 @@ public class DoorController : MonoBehaviour
 
     private void TryToggleDoor()
     {
-        // 인벤토리가 없거나, 키카드가 없으면 문 안 열림
         if (currentPlayerInventory == null ||
             !currentPlayerInventory.HasItem(requiredItemId))
         {
             Debug.Log("Door locked: keycard required.");
+            ShowLockedMessage();
             return;
         }
+
+        // Player has the key: make sure warning is hidden
+        if (lockedMessageText != null)
+            lockedMessageText.gameObject.SetActive(false);
+
+        if (promptText != null && isPlayerNear)
+            promptText.gameObject.SetActive(true);
 
         ToggleDoor();
     }
@@ -126,6 +146,34 @@ public class DoorController : MonoBehaviour
     {
         isOpen = !isOpen;   // »óÅÂ ¹ÝÀü
         doorAnimator.SetBool("isOpen", isOpen);
+    }
+
+    private void ShowLockedMessage()
+    {
+        if (lockedMessageText == null) return;
+
+        // Hide "Open Door (F)" while we show the warning
+        if (promptText != null)
+            promptText.gameObject.SetActive(false);
+
+        lockedMessageText.text = lockedMessage;
+        lockedMessageText.gameObject.SetActive(true);
+
+        // Auto-hide after some time
+        StopAllCoroutines();
+        StartCoroutine(HideLockedMessageAfterDelay());
+    }
+
+    private System.Collections.IEnumerator HideLockedMessageAfterDelay()
+    {
+        yield return new WaitForSeconds(lockedMessageDuration);
+
+        if (lockedMessageText != null)
+            lockedMessageText.gameObject.SetActive(false);
+
+        // Bring back "Open Door (F)" if the player is still near
+        if (promptText != null && isPlayerNear)
+            promptText.gameObject.SetActive(true);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -155,6 +203,10 @@ public class DoorController : MonoBehaviour
             // UI ºñÈ°¼ºÈ­
             if (interactUI != null)
                 interactUI.SetActive(false);
+
+            // Also hide locked message when leaving area
+            if (lockedMessageText != null)
+                lockedMessageText.gameObject.SetActive(false);
         }
     }
 }
